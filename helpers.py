@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 from PIL import Image
+from pathlib import Path
 from decouple import config
 import torch
 import numpy as np
@@ -34,11 +35,11 @@ def decode_segmap(image, source, nc=21):
   rgb = np.stack([r, g, b], axis=2)
 
   # Load the foreground input image 
-  foreground = cv2.imread(source)
+  foreground = np.array(source.convert("RGB"))
 
   # Change the color of foreground image to RGB 
   # and resize image to match shape of R-band in RGB output map
-  foreground = cv2.cvtColor(foreground, cv2.COLOR_BGR2RGB)
+  # foreground = cv2.cvtColor(foreground, cv2.COLOR_BGR2RGB)
   foreground = cv2.resize(foreground,(r.shape[1],r.shape[0]))
 
   # Create a background array to hold white pixels
@@ -71,20 +72,23 @@ def decode_segmap(image, source, nc=21):
   outImage = (outImage-outImage.min())/(outImage.max()-outImage.min())
   return outImage
 
-def remove_background(net, path):
-    img = Image.open(path)
+def remove_background(net, file, file_path, dev='cpu'):
+    if torch.cuda.is_available():
+      dev='cuda'
+    img = Image.open(file)
     # Comment the Resize and CenterCrop for better inference results
     trf = T.Compose([T.Resize(config("RESIZETO", cast=int)),
                     T.ToTensor(), 
                     T.Normalize(mean = [0.485, 0.456, 0.406], 
                                 std = [0.229, 0.224, 0.225])])
-    inp = trf(img).unsqueeze(0)
-    out = net(inp)['out']
+    inp = trf(img).unsqueeze(0).to(dev)
+    out = net.to(dev)(inp)['out']
     om = torch.argmax(out.squeeze(), dim=0).detach().cpu().numpy()
     
-    rgb = decode_segmap(om, path)
+    rgb = decode_segmap(om, img)
     # imgshape = np.array(img).shape
     # width, height = imgshape[1], imgshape[0]
     # rgb = cv2.resize(rgb, (width, height))
     # cv2.imwrite(path, rgb)
-    plt.imsave(path, rgb, dpi=1000)
+    Path(file_path).unlink(missing_ok=True)
+    plt.imsave(file_path, rgb, dpi=1000)

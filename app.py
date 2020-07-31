@@ -1,10 +1,12 @@
-from flask import Flask, flash, request, render_template, redirect, session, url_for
-from flask_dropzone import Dropzone
-from flask_uploads import UploadSet, configure_uploads, IMAGES, patch_request_class
-from werkzeug.utils import secure_filename
-from helpers import remove_background
-import torch
 import os
+import torch
+from PIL import Image
+from torchvision import models
+from flask import Flask, flash, request, render_template, redirect, session, url_for, send_from_directory
+from flask_dropzone import Dropzone
+from werkzeug.utils import secure_filename
+
+from helpers import remove_background
 
 app = Flask(__name__, static_url_path='/static')
 dropzone = Dropzone(app)
@@ -20,23 +22,19 @@ app.config['DROPZONE_REDIRECT_VIEW'] = 'results'
 
 # Uploads settings
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
-app.config['UPLOADED_IMAGES_DEST'] = os.getcwd() + '/static/images'
-images = UploadSet('images', IMAGES)
-configure_uploads(app, images)
-patch_request_class(app)  # set maximum file size, default is 16MB
+app.config['OUTPUT_IMAGES_DEST'] = os.getcwd() + '/static/images'
 
 # model
-model = torch.load("static/deeplabv3_resnet101_coco.pth")
-model.eval()
+# model = torch.load("static/deeplabv3_resnet101_coco.pth").eval() # loading model from file
+model = models.segmentation.deeplabv3_resnet101(pretrained=1).eval()
 
-# @app.route('/')
-# def home_page():
-#     return render_template('index.html')
-
-# @app.route('/upload')
 def allowed_file(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+@app.route('/images/<filename>')
+def output_file(filename):
+    return send_from_directory(app.config['OUTPUT_IMAGES_DEST'] + '/', filename)
 
 @app.route('/', methods=['GET', 'POST'])
 def bg_remove():
@@ -45,13 +43,9 @@ def bg_remove():
         files_obj = request.files
         for f in files_obj:
             file = request.files.get(f)
-            filename = images.save(
-                file,
-                name=file.filename
-            )
-            file_path = app.config['UPLOADED_IMAGES_DEST'] + '/' + filename
-            remove_background(model, file_path)
-            file_urls.append(images.url(filename))
+            file_path = app.config['OUTPUT_IMAGES_DEST'] + '/' + file.filename
+            remove_background(model, file, file_path)
+            file_urls.append(url_for('output_file', filename=file.filename))
             # print(file_urls)
             session['file_urls'] = file_urls
             return "uploading..."
