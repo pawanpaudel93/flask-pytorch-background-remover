@@ -79,7 +79,10 @@ def remove_background(net, file, file_path, DEFAULT_CONFIG, dev='cpu'):
       dev='cuda'
     img = Image.open(file)
     # Comment the Resize and CenterCrop for better inference results
-    trf = T.Compose([T.Resize(config("RESIZETO", cast=int)),
+    resize_to = config("RESIZETO", cast=str)
+    resize_to = resize_to.split(",")
+    resize_to = int(resize_to[0]) if len(resize_to)==1 else tuple([int(v) for v in resize_to])
+    trf = T.Compose([T.Resize(resize_to),
                     #T.CenterCrop(224), 
                     T.ToTensor(), 
                     T.Normalize(mean = [0.485, 0.456, 0.406], 
@@ -93,5 +96,5 @@ def remove_background(net, file, file_path, DEFAULT_CONFIG, dev='cpu'):
         output_image = cv2.cvtColor(np.array(output_image, dtype=np.uint8), cv2.COLOR_BGR2GRAY)
         cv2.imwrite(file_path, output_image)
     else:
-        outImage = (output_image-output_image.min())/(output_image.max()-output_image.min())
+        output_image = (output_image-output_image.min())/(output_image.max()-output_image.min())
         plt.imsave(file_path, output_image, dpi=1000)
