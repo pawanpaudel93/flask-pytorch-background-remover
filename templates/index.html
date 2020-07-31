@@ -1,35 +1,41 @@
-<!-- <!doctype html>
-<title>Python Flask File Upload</title>
-<h2>Select a file to upload</h2>
-<p>
-	{% with messages = get_flashed_messages() %}
-	  {% if messages %}
-		<ul class=flashes>
-		{% for message in messages %}
-		  <li>{{ message }}</li>
-		{% endfor %}
-		</ul>
-	  {% endif %}
-	{% endwith %}
-</p>
-<form method="post" action="/" enctype="multipart/form-data">
-    <dl>
-		<p>
-			<input type="file" name="file" autocomplete="off" required>
-		</p>
-    </dl>
-    <p>
-		<input type="submit" value="Submit">
-	</p>
-</form> -->
-
 <head>
     <title>Background Remover App</title>
-      {{ dropzone.load() }}
-      {{ dropzone.style('border: 2px dashed #0087F7; margin: 10%; min-height: 400px;') }}
+	<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    {{ dropzone.load() }}
+    {{ dropzone.style('border: 2px dashed #0087F7; margin: 10%; min-height: 400px;') }}
 </head>
 
 <body>
-    <h1>Upload your images!</h1>
-    {{ dropzone.create(action_view='bg_remove') }}
-  </body>
+	<div class="container">
+		<h1>Upload your images!</h1>
+		<label for="bnw">Black and White</label><input type="checkbox" name="bnw" value="bnw" id="bnw">
+		{{ dropzone.create(action_view='bg_remove') }}
+	</div>
+	<script>
+		var data;
+		$("#bnw").change(function() {
+			if(this.checked) {
+				data = {"bnw": "True"}
+				switch_env("#bnw")
+			} else {
+				data = {"bnw": "False"}
+				switch_env("#bnw")
+			}
+		});
+		function switch_env(element) {
+			$.ajax({
+				type: "POST",
+				contentType: 'application/json',
+				data: JSON.stringify(data),
+				url: "/switch/config",
+				dataType: "json",
+				success: function(data) { 
+					console.log(data);                    
+				},
+				error: function(jqXHR) {
+					console.log(jqXHR);
+				}
+			})
+		}
+	</script>
+</body>

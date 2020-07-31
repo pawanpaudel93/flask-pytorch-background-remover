@@ -69,15 +69,18 @@ def decode_segmap(image, source, nc=21):
   outImage = cv2.add(foreground, background)
 
   # Return a normalized output image for display
-  outImage = (outImage-outImage.min())/(outImage.max()-outImage.min())
+#   outImage = (outImage-outImage.min())/(outImage.max()-outImage.min())
   return outImage
 
-def remove_background(net, file, file_path, dev='cpu'):
+def remove_background(net, file, file_path, DEFAULT_CONFIG, dev='cpu'):
+    # removing the image with the same name if it is already present
+    Path(file_path).unlink(missing_ok=True)
     if torch.cuda.is_available():
       dev='cuda'
     img = Image.open(file)
     # Comment the Resize and CenterCrop for better inference results
     trf = T.Compose([T.Resize(config("RESIZETO", cast=int)),
+                    #T.CenterCrop(224), 
                     T.ToTensor(), 
                     T.Normalize(mean = [0.485, 0.456, 0.406], 
                                 std = [0.229, 0.224, 0.225])])
@@ -85,10 +88,10 @@ def remove_background(net, file, file_path, dev='cpu'):
     out = net.to(dev)(inp)['out']
     om = torch.argmax(out.squeeze(), dim=0).detach().cpu().numpy()
     
-    rgb = decode_segmap(om, img)
-    # imgshape = np.array(img).shape
-    # width, height = imgshape[1], imgshape[0]
-    # rgb = cv2.resize(rgb, (width, height))
-    # cv2.imwrite(path, rgb)
-    Path(file_path).unlink(missing_ok=True)
-    plt.imsave(file_path, rgb, dpi=1000)
+    output_image = decode_segmap(om, img)
+    if DEFAULT_CONFIG["BLACKnWHITE"]:
+        output_image = cv2.cvtColor(np.array(output_image, dtype=np.uint8), cv2.COLOR_BGR2GRAY)
+        cv2.imwrite(file_path, output_image)
+    else:
+        outImage = (output_image-output_image.min())/(output_image.max()-output_image.min())
+        plt.imsave(file_path, output_image, dpi=1000)

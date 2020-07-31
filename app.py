@@ -2,7 +2,8 @@ import os
 import torch
 from PIL import Image
 from torchvision import models
-from flask import Flask, flash, request, render_template, redirect, session, url_for, send_from_directory
+from flask import (Flask, flash, request, render_template, 
+                    redirect, session, url_for, send_from_directory, jsonify )
 from flask_dropzone import Dropzone
 from werkzeug.utils import secure_filename
 
@@ -27,6 +28,7 @@ app.config['OUTPUT_IMAGES_DEST'] = os.getcwd() + '/static/images'
 # model
 # model = torch.load("static/deeplabv3_resnet101_coco.pth").eval() # loading model from file
 model = models.segmentation.deeplabv3_resnet101(pretrained=1).eval()
+DEFAULT_CONFIG = {"BLACKnWHITE": False}
 
 def allowed_file(filename):
     return '.' in filename and \
@@ -36,6 +38,14 @@ def allowed_file(filename):
 def output_file(filename):
     return send_from_directory(app.config['OUTPUT_IMAGES_DEST'] + '/', filename)
 
+@app.route('/switch/config', methods=['POST'])
+def switch_config():
+    if request.method == 'POST':
+        data = request.get_json()
+        if "bnw" in data:
+            DEFAULT_CONFIG["BLACKnWHITE"] = bool(data["bnw"])
+        return jsonify(success=True)
+
 @app.route('/', methods=['GET', 'POST'])
 def bg_remove():
     file_urls = []
@@ -44,9 +54,8 @@ def bg_remove():
         for f in files_obj:
             file = request.files.get(f)
             file_path = app.config['OUTPUT_IMAGES_DEST'] + '/' + file.filename
-            remove_background(model, file, file_path)
+            remove_background(model, file, file_path, DEFAULT_CONFIG)
             file_urls.append(url_for('output_file', filename=file.filename))
-            # print(file_urls)
             session['file_urls'] = file_urls
             return "uploading..."
     if request.method == 'GET':
