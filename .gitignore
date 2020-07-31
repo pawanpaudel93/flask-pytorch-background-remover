@@ -29,4 +29,5 @@ htmlcov/
 venv
 .env
 static/images/*
+!static/images/readme.txt
 static/deeplabv3_resnet101_coco.pth
