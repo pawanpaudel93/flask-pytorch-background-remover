@@ -1,7 +1,7 @@
 {
     "name": "Background Remover PyTorch",
     "description": "Background Remover PyTorch",
-    "repository": "https://github.com/pawanpaudel93/Torrent2GDrive",
+    "repository": "https://github.com/pawanpaudel93/flask-pytorch-background-remover",
     "logo": "https://raw.githubusercontent.com/pawanpaudel93/flask-pytorch-background-remover/master/static/flask-pytorch.jpeg",
     "keywords": ["flask", "pytorch", "background-remover"],
     "buildpacks": [
